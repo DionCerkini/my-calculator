@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Calculator2_Extrem_Pro</title>
+</head>
+
+<style>
+    .calculator {
+        width: 250px;
+        margin: 0 auto;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+
+    .row {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .row input[type="button"] {
+        width: 23%; /* Ändert die Breite, um 4 Tasten pro Zeile zu haben */
+        padding: 10px;
+        font-size: 18px;
+    }
+
+    input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        font-size: 18px;
+    }
+</style>
+
+<body>
+
+<div class="calculator">
+    <input type="text" id="display" readonly>
+    <div class="row">
+        <input type="button" value="1" onclick="addToDisplay('1')">
+        <input type="button" value="2" onclick="addToDisplay('2')">
+        <input type="button" value="3" onclick="addToDisplay('3')">
+        <input type="button" value="+" onclick="addToDisplay('+')">
+    </div>
+    <div class="row">
+        <input type="button" value="4" onclick="addToDisplay('4')">
+        <input type="button" value="5" onclick="addToDisplay('5')">
+        <input type="button" value="6" onclick="addToDisplay('6')">
+        <input type="button" value="-" onclick="addToDisplay('-')">
+    </div>
+    <div class="row">
+        <input type="button" value="7" onclick="addToDisplay('7')">
+        <input type="button" value="8" onclick="addToDisplay('8')">
+        <input type="button" value="9" onclick="addToDisplay('9')">
+        <input type="button" value="*" onclick="addToDisplay('*')">
+    </div>
+    <div class="row">
+        <input type="button" value="0" onclick="addToDisplay('0')">
+        <input type="button" value="C" onclick="clearDisplay()">
+        <input type="button" value="/" onclick="addToDisplay('/')">
+        <input type="button" value="=" onclick="calculate()">
+    </div>
+    <p>Ergebnis: <span id="resultSpan"></span></p>
+    <p style="color: red;"><span id="errorSpan"></span></p>
+</div>
+
+<script>
+    function addToDisplay(value) {
+        document.getElementById('display').value += value;
+    }
+
+    function clearDisplay() {
+        document.getElementById('display').value = '';
+    }
+
+    function getCalculation() {
+        return document.getElementById("display").value;
+    }
+
+    function calculate() {
+        fetch("http://localhost:8080/calculate?" + new URLSearchParams({
+            value: getCalculation()
+        })).then(response => {
+            return response.text();
+        }).then(result => {
+            document.getElementById("resultSpan").textContent = result; // Ergebnis anzeigen
+        }).catch(error => {
+            console.error(error);
+            document.getElementById("errorSpan").textContent = "Fehler beim Berechnen"; // Fehler anzeigen
+        });
+    }
+
+</script>
+
+</body>
+</html>
