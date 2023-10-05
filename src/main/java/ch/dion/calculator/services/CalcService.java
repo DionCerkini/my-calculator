@@ -1,109 +1,79 @@
 package ch.dion.calculator.services;
 
 import ch.dion.calculator.enums.OperatorEnum;
+import ch.dion.calculator.models.NumberAndOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
 public class CalcService implements ICalcService {
     private static final Logger LOGGER = LoggerFactory.getLogger(CalcService.class);
-    private final ArrayList<BigDecimal> numberList = new ArrayList<>();
-    private final ArrayList<OperatorEnum> operatorList = new ArrayList<>();
-
+    private static final Pattern NUMBER_OPERATOR_REGEX = Pattern.compile("(\\+|\\-|\\*|\\/)\\d+");
 
     @Override
-    public String add() {
-        return null;
-    }
+    public String calculate(String calculation) {
+        if (!calculation.startsWith("-")) {
+            calculation = "+" + calculation;
+        }
 
-    @Override
-    public String subtract() {
-        return null;
-    }
+        List<NumberAndOperator> numbersAndOperators = getNumbersAndOperators(calculation);
 
-    @Override
-    public String multiply() {
-        return null;
-    }
-
-    @Override
-    public String divide() {
-        return null;
-    }
-
-    @Override
-    public void findOperator(String value) {
-        // Alle Operatorzeichen in das entsprechende Array speichern
-        for (char c : value.toCharArray()) {
-            if (c == '+' || c == '-' || c == '*' || c == '/') {
-                operatorList.add(OperatorEnum.valueOf(String.valueOf(c)));
+        for (NumberAndOperator no : numbersAndOperators) {
+            if (no.getOperator().equals(OperatorEnum.MULTIPLY) || no.getOperator().equals(OperatorEnum.DIVIDE)) {
+                prioritizedCalculation(numbersAndOperators);
+                break;
             }
         }
+
+        return calculation;
     }
 
     @Override
-    public String calculate() {
-        return null;
-    }
+    public List<NumberAndOperator> getNumbersAndOperators(String calculation) {
+        List<NumberAndOperator> numbersAndOperators = new ArrayList<>();
+        Matcher matcher = NUMBER_OPERATOR_REGEX.matcher(calculation);
 
-    @Override
-    public void findNumbers(String value) {
-
-        // Aufteilungen in separate Arrays speichern (Zahlen und Operationszeichen)
-        Pattern pattern = Pattern.compile("[()+\\-*/]");
-        String[] splitOperators = pattern.split(value);
-
-        for (String s : splitOperators) {
-            BigDecimal numberValue = new BigDecimal(s);
-            numberList.add(numberValue);
+        while (matcher.find()) {
+            numbersAndOperators.add(new NumberAndOperator(matcher.group()));
         }
+
+        return numbersAndOperators;
     }
 
-    @Override
-    public String calculate(String value) {
-        findOperator(value);
-        findNumbers(value);
+    private void prioritizedCalculation(List<NumberAndOperator> numberAndOperators) {
+        Map<Integer, NumberAndOperator> valuesToUpdate = new HashMap<>();
 
-        if (operatorList.contains(OperatorEnum.MULTIPLY) || operatorList.contains(OperatorEnum.DIVIDE))
-            prioritizeOperators();
 
-        for (OperatorEnum o : operatorList) {
-            switch (o) {
-                case ADD -> add();
-                case SUBTRACT -> subtract();
-            }
-        }
-    }
-
-    // * and /
-    public void prioritizeOperators() {
-        int initialLength = operatorList.size();
-        ArrayList<Integer> operatorsToRemove = new ArrayList<>();
-        for (int i = 0; i < initialLength; i++) {
-            switch (operatorList.get(i)) {
+        for (int i = 1; i < numberAndOperators.size(); i++) {
+            switch (numberAndOperators.get(i).getOperator()) {
                 case MULTIPLY -> {
-                    multiply();
-                    operatorsToRemove.add(i);
+                    NumberAndOperator numberAndOperator = multiply(numberAndOperators.get(i), numberAndOperators.get(i - 1));
+                    valuesToUpdate.put(i, numberAndOperator);
                 }
-                case DIVIDE -> {
-                    divide();
-                    operatorsToRemove.add(i);
-                }
+                case DIVIDE -> divide();
             }
         }
-
-        removeOperator(operatorsToRemove);
     }
 
-    private void removeOperator(List<Integer> operators) {
-        for (Integer i : operators) {
-            operatorList.remove(i.intValue());
-        }
+    private NumberAndOperator multiply(NumberAndOperator lead, NumberAndOperator behind) {
+        BigDecimal result = behind.getNumber().multiply(lead.getNumber());
+
+        return new NumberAndOperator(result.toString());
+    }
+
+    private NumberAndOperator divide(NumberAndOperator lead, NumberAndOperator behind) {
+
+        BigDecimal result = behind.getNumber().multiply(lead.getNumber());
+
+        return new NumberAndOperator(result.toString());
     }
 }
