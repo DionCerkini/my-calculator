@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +28,11 @@ public class CalcService implements ICalcService {
 
         List<NumberAndOperator> numbersAndOperators = getNumbersAndOperators(calculation);
 
+        if (checkDivisionByZero(numbersAndOperators)) {
+            return null;
+        }
+
+        // TODO: so lange rechnen, bis nicht mehr möglich
         for (NumberAndOperator no : numbersAndOperators) {
             if (no.getOperator().equals(OperatorEnum.MULTIPLY) || no.getOperator().equals(OperatorEnum.DIVIDE)) {
                 prioritizedCalculation(numbersAndOperators);
@@ -34,7 +40,10 @@ public class CalcService implements ICalcService {
             }
         }
 
-        return calculation;
+        // TODO: addition und subtraktion
+
+        // TODO: return real result
+        return numbersAndOperators.get(0).getNumber().toString();
     }
 
     @Override
@@ -49,31 +58,69 @@ public class CalcService implements ICalcService {
         return numbersAndOperators;
     }
 
-    private void prioritizedCalculation(List<NumberAndOperator> numberAndOperators) {
-        Map<Integer, NumberAndOperator> valuesToUpdate = new HashMap<>();
-
-
-        for (int i = 1; i < numberAndOperators.size(); i++) {
-            switch (numberAndOperators.get(i).getOperator()) {
-                case MULTIPLY -> {
-                    NumberAndOperator numberAndOperator = multiply(numberAndOperators.get(i), numberAndOperators.get(i - 1));
-                    valuesToUpdate.put(i, numberAndOperator);
-                }
-                case DIVIDE -> divide();
+    private boolean checkDivisionByZero(List<NumberAndOperator> numbersAndOperators) {
+        for (NumberAndOperator no : numbersAndOperators) {
+            if (no.getNumber().equals(BigDecimal.ZERO) && no.getOperator().equals(OperatorEnum.DIVIDE)) {
+                return true;
             }
         }
+        return false;
+    }
+
+    private void prioritizedCalculation(List<NumberAndOperator> numbersAndOperators) {
+        Map<Integer, NumberAndOperator> valuesToUpdate = new HashMap<>();
+
+        for (int i = 1; i < numbersAndOperators.size(); i++) {
+            switch (numbersAndOperators.get(i).getOperator()) {
+                case MULTIPLY -> {
+                    NumberAndOperator numberAndOperator = multiply(numbersAndOperators.get(i), numbersAndOperators.get(i - 1));
+                    valuesToUpdate.put(i, numberAndOperator);
+                }
+                case DIVIDE -> {
+                    NumberAndOperator numberAndOperator = divide(numbersAndOperators.get(i), numbersAndOperators.get(i - 1));
+                    valuesToUpdate.put(i, numberAndOperator);
+                }
+            }
+        }
+
+        handleNewNumbers(numbersAndOperators, valuesToUpdate);
     }
 
     private NumberAndOperator multiply(NumberAndOperator lead, NumberAndOperator behind) {
         BigDecimal result = behind.getNumber().multiply(lead.getNumber());
-
-        return new NumberAndOperator(result.toString());
+        return new NumberAndOperator(handleNewOperator(result, behind));
     }
 
     private NumberAndOperator divide(NumberAndOperator lead, NumberAndOperator behind) {
+        BigDecimal result = behind.getNumber().divide(lead.getNumber(), RoundingMode.HALF_UP);
 
-        BigDecimal result = behind.getNumber().multiply(lead.getNumber());
+        return new NumberAndOperator(handleNewOperator(result, behind));
+    }
 
-        return new NumberAndOperator(result.toString());
+    private void handleNewNumbers(List<NumberAndOperator> numbersAndOperators, Map<Integer, NumberAndOperator> newValues) {
+        for (Map.Entry<Integer, NumberAndOperator> entry : newValues.entrySet()) {
+            // replace lead
+            numbersAndOperators.set(entry.getKey(), entry.getValue());
+            // remove behind
+            numbersAndOperators.remove(entry.getKey() - 1);
+        }
+    }
+
+    private String handleNewOperator(BigDecimal number, NumberAndOperator behind) {
+        switch (behind.getOperator()) {
+            case ADD -> {
+                return "+" + number;
+            }
+            case SUBTRACT -> {
+                return "-" + number;
+            }
+            case MULTIPLY -> {
+                return "*" + number;
+            }
+            case DIVIDE -> {
+                return "/" + number;
+            }
+        }
+        return null;
     }
 }
