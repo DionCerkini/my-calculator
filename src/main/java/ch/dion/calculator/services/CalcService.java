@@ -33,14 +33,11 @@ public class CalcService implements ICalcService {
         }
 
         // TODO: so lange rechnen, bis nicht mehr möglich
-        for (NumberAndOperator no : numbersAndOperators) {
-            if (no.getOperator().equals(OperatorEnum.MULTIPLY) || no.getOperator().equals(OperatorEnum.DIVIDE)) {
-                prioritizedCalculation(numbersAndOperators);
-                break;
-            }
+        while (checkMultiplicationAndDivision(numbersAndOperators)) {
+            prioritizedCalculation(numbersAndOperators);
         }
 
-        // TODO: addition und subtraktion
+        normalCalculation(numbersAndOperators);
 
         // TODO: return real result
         return numbersAndOperators.get(0).getNumber().toString();
@@ -56,6 +53,14 @@ public class CalcService implements ICalcService {
         }
 
         return numbersAndOperators;
+    }
+
+    private boolean checkMultiplicationAndDivision(List<NumberAndOperator> numbersAndOperators) {
+        for (NumberAndOperator no : numbersAndOperators) {
+            if (no.getOperator().equals(OperatorEnum.MULTIPLY) || no.getOperator().equals(OperatorEnum.DIVIDE))
+                return true;
+        }
+        return false;
     }
 
     private boolean checkDivisionByZero(List<NumberAndOperator> numbersAndOperators) {
@@ -86,6 +91,36 @@ public class CalcService implements ICalcService {
         handleNewNumbers(numbersAndOperators, valuesToUpdate);
     }
 
+    private void normalCalculation(List<NumberAndOperator> numbersAndOperators) {
+        Map<Integer, NumberAndOperator> valuesToUpdate = new HashMap<>();
+
+        for (int i = 1; i < numbersAndOperators.size(); i++) {
+            switch (numbersAndOperators.get(i).getOperator()) {
+                case ADD -> {
+                    NumberAndOperator numberAndOperator = add(numbersAndOperators.get(i), numbersAndOperators.get(i - 1));
+                    valuesToUpdate.put(i, numberAndOperator);
+                }
+                case SUBTRACT -> {
+                    NumberAndOperator numberAndOperator = subtract(numbersAndOperators.get(i), numbersAndOperators.get(i - 1));
+                    valuesToUpdate.put(i, numberAndOperator);
+                }
+            }
+        }
+
+        handleNewNumbers(numbersAndOperators, valuesToUpdate);
+    }
+
+    private NumberAndOperator add(NumberAndOperator lead, NumberAndOperator behind) {
+        BigDecimal result = behind.getNumber().add(lead.getNumber());
+        return new NumberAndOperator(handleNewOperator(result, behind));
+    }
+
+    private NumberAndOperator subtract(NumberAndOperator lead, NumberAndOperator behind) {
+        // add because value is saved as -1
+        BigDecimal result = behind.getNumber().add(lead.getNumber());
+        return new NumberAndOperator(handleNewOperator(result, behind));
+    }
+
     private NumberAndOperator multiply(NumberAndOperator lead, NumberAndOperator behind) {
         BigDecimal result = behind.getNumber().multiply(lead.getNumber());
         return new NumberAndOperator(handleNewOperator(result, behind));
@@ -104,6 +139,7 @@ public class CalcService implements ICalcService {
             // remove behind
             numbersAndOperators.remove(entry.getKey() - 1);
         }
+        newValues.clear();
     }
 
     private String handleNewOperator(BigDecimal number, NumberAndOperator behind) {
@@ -112,7 +148,7 @@ public class CalcService implements ICalcService {
                 return "+" + number;
             }
             case SUBTRACT -> {
-                return "-" + number;
+                return number.toString();
             }
             case MULTIPLY -> {
                 return "*" + number;

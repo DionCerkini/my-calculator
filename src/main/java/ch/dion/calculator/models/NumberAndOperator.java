@@ -26,11 +26,10 @@ public class NumberAndOperator {
     }
 
     public NumberAndOperator(String value) {
-
         operator = convertOperatorToEnum(value.substring(0, 1));
 
         if (operator.equals(OperatorEnum.SUBTRACT)) {
-            number = new BigDecimal("-" + value.substring(1));
+            number = new BigDecimal(value.substring(1)).negate();
         } else {
             number = new BigDecimal(value.substring(1));
         }
